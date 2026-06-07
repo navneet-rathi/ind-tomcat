@@ -8,6 +8,7 @@
     tomcat_major: "v10.1.55"
     tomcat_install_dir: "/opt/tomcat"
     tomcat_port: 8080
+    service_name: "tomcat"
     java_package: "openjdk-17-jdk" # Use "java-17-openjdk-devel" for RHEL/Yum systems
 #https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.55/bin/apache-tomcat-10.1.55.tar.gz
   tasks:
@@ -56,7 +57,7 @@
 
     - name: Configure Tomcat systemd service unit
       ansible.builtin.copy:
-        dest: /etc/systemd/system/tomcat.service
+        dest: /etc/systemd/system/{{ service_name }}.service
         mode: '0644'
         content: |
           [Unit]
@@ -83,7 +84,7 @@
 
     - name: Ensure Tomcat service is running and enabled on boot
       ansible.builtin.systemd:
-        name: tomcat
+        name: "{{ service_name }}"
         state: started
         enabled: yes
 
@@ -113,5 +114,5 @@
   handlers:
     - name: Restart Tomcat
       ansible.builtin.systemd:
-        name: tomcat
+        name: "{{ service_name }}"
         state: restarted
