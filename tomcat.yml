@@ -29,7 +29,7 @@
         state: present
 
     - name: Create isolated Tomcat system user
-      user:
+      ansible.builtin.user:
         name: tomcat
         group: tomcat
         home: "{{ tomcat_install_dir }}"
@@ -37,7 +37,7 @@
         state: present
 
     - name: Create base installation directory
-      anisble.builtin.file:
+      ansible.builtin.file:
         path: "{{ tomcat_install_dir }}"
         state: directory
         owner: tomcat
