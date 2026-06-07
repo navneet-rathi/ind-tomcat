@@ -11,20 +11,20 @@
 
   tasks:
     - name: Install OpenJDK Java Runtime
-      apt:
+      ansible.builtin.apt:
         name: "{{ java_package }}"
         state: present
         update_cache: yes
       when: ansible_os_family == "Debian"
 
     - name: Install OpenJDK Java Runtime (RHEL/CentOS)
-      yum:
+      ansible.builtin.dnf:
         name: "java-17-openjdk-devel"
         state: present
       when: ansible_os_family == "RedHat"
 
     - name: Create dedicated Tomcat group
-      group:
+      ansible.builtin.group:
         name: tomcat
         state: present
 
@@ -37,7 +37,7 @@
         state: present
 
     - name: Create base installation directory
-      file:
+      anisble.builtin.file:
         path: "{{ tomcat_install_dir }}"
         state: directory
         owner: tomcat
@@ -45,7 +45,7 @@
         mode: '0755'
 
     - name: Download and extract Apache Tomcat archive
-      unarchive:
+      ansible.builtin.unarchive:
         src: "https://apache.org{{ tomcat_major }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
         dest: "{{ tomcat_install_dir }}"
         remote_src: yes
@@ -54,7 +54,7 @@
         group: tomcat
 
     - name: Configure Tomcat systemd service unit
-      copy:
+      ansible.builtin.copy:
         dest: /etc/systemd/system/tomcat.service
         mode: '0644'
         content: |
@@ -77,32 +77,40 @@
           WantedBy=multi-user.target
 
     - name: Force systemd to reload config descriptors
-      systemd:
+      ansible.builtin.systemd:
         daemon_reload: yes
 
     - name: Ensure Tomcat service is running and enabled on boot
-      systemd:
+      ansible.builtin.systemd:
         name: tomcat
         state: started
         enabled: yes
 
     - name: Verify Tomcat port is active and listening
-      wait_for:
+      ansible.builtin.wait_for:
         port: "{{ tomcat_port }}"
         delay: 5
         timeout: 30
 
     - name: Deploy Java Application Archive (WAR File)
-      get_url:
+      ansible.builtin.get_url:
         url: "https://tomcat.apache.org/tomcat-10.1-doc/appdev/sample/sample.war"
         dest: "{{ tomcat_install_dir }}/webapps/ROOT.war"
         owner: tomcat
         group: tomcat
         mode: '0644'
       notify: Restart Tomcat
+    
+    - name: Ensure Firewall allows traffic on Tomcat port
+      ansible.posix.firewalld:
+        port: "{{ tomcat_port }}/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      when: ansible_os_family == "RedHat"
 
   handlers:
     - name: Restart Tomcat
-      systemd:
+      ansible.builtin.systemd:
         name: tomcat
         state: restarted
