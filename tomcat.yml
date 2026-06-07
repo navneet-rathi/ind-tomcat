@@ -1,0 +1,108 @@
+---
+- name: Automate Apache Tomcat Setup and Application Deployment
+  hosts: webservers
+  become: true
+  vars:
+    tomcat_version: "10.1.24"
+    tomcat_major: "v10.1.24"
+    tomcat_install_dir: "/opt/tomcat"
+    tomcat_port: 8080
+    java_package: "openjdk-17-jdk" # Use "java-17-openjdk-devel" for RHEL/Yum systems
+
+  tasks:
+    - name: Install OpenJDK Java Runtime
+      apt:
+        name: "{{ java_package }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install OpenJDK Java Runtime (RHEL/CentOS)
+      yum:
+        name: "java-17-openjdk-devel"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Create dedicated Tomcat group
+      group:
+        name: tomcat
+        state: present
+
+    - name: Create isolated Tomcat system user
+      user:
+        name: tomcat
+        group: tomcat
+        home: "{{ tomcat_install_dir }}"
+        shell: /bin/false
+        state: present
+
+    - name: Create base installation directory
+      file:
+        path: "{{ tomcat_install_dir }}"
+        state: directory
+        owner: tomcat
+        group: tomcat
+        mode: '0755'
+
+    - name: Download and extract Apache Tomcat archive
+      unarchive:
+        src: "https://apache.org{{ tomcat_major }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+        dest: "{{ tomcat_install_dir }}"
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+        owner: tomcat
+        group: tomcat
+
+    - name: Configure Tomcat systemd service unit
+      copy:
+        dest: /etc/systemd/system/tomcat.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Apache Tomcat Web Application Container
+          After=network.target
+
+          [Service]
+          Type=forking
+          User=tomcat
+          Group=tomcat
+          Environment=CATALINA_PID={{ tomcat_install_dir }}/temp/tomcat.pid
+          Environment=CATALINA_HOME={{ tomcat_install_dir }}
+          Environment=CATALINA_BASE={{ tomcat_install_dir }}
+          ExecStart={{ tomcat_install_dir }}/bin/startup.sh
+          ExecStop={{ tomcat_install_dir }}/bin/shutdown.sh
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Force systemd to reload config descriptors
+      systemd:
+        daemon_reload: yes
+
+    - name: Ensure Tomcat service is running and enabled on boot
+      systemd:
+        name: tomcat
+        state: started
+        enabled: yes
+
+    - name: Verify Tomcat port is active and listening
+      wait_for:
+        port: "{{ tomcat_port }}"
+        delay: 5
+        timeout: 30
+
+    - name: Deploy Java Application Archive (WAR File)
+      get_url:
+        url: "https://tomcat.apache.org/tomcat-10.1-doc/appdev/sample/sample.war"
+        dest: "{{ tomcat_install_dir }}/webapps/ROOT.war"
+        owner: tomcat
+        group: tomcat
+        mode: '0644'
+      notify: Restart Tomcat
+
+  handlers:
+    - name: Restart Tomcat
+      systemd:
+        name: tomcat
+        state: restarted
