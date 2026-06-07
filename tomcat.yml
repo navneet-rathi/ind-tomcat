@@ -3,12 +3,13 @@
   hosts: all
   become: true
   vars:
-    tomcat_version: "10.1.24"
-    tomcat_major: "v10.1.24"
+    tomcat_version: "10.1.55"
+    tomcat_major_version: "10"
+    tomcat_major: "v10.1.55"
     tomcat_install_dir: "/opt/tomcat"
     tomcat_port: 8080
     java_package: "openjdk-17-jdk" # Use "java-17-openjdk-devel" for RHEL/Yum systems
-
+#https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.55/bin/apache-tomcat-10.1.55.tar.gz
   tasks:
     - name: Install OpenJDK Java Runtime
       ansible.builtin.apt:
@@ -46,7 +47,7 @@
 
     - name: Download and extract Apache Tomcat archive
       ansible.builtin.unarchive:
-        src: "https://apache.org{{ tomcat_major }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+        src: "https://dlcdn.apache.org/tomcat/tomcat-{{tomcat_major_version}}/{{ tomcat_major }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
         dest: "{{ tomcat_install_dir }}"
         remote_src: yes
         extra_opts: [--strip-components=1]
