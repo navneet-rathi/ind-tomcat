@@ -1,6 +1,6 @@
 ---
 - name: Automate Apache Tomcat Setup and Application Deployment
-  hosts: webservers
+  hosts: all
   become: true
   vars:
     tomcat_version: "10.1.24"
