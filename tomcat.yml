@@ -96,7 +96,7 @@
     - name: Deploy Java Application Archive (WAR File)
       ansible.builtin.get_url:
         url: "https://tomcat.apache.org/tomcat-10.1-doc/appdev/sample/sample.war"
-        dest: "{{ tomcat_install_dir }}/webapps/ROOT.war"
+        dest: "{{ tomcat_install_dir }}/webapps/sample.war"
         owner: tomcat
         group: tomcat
         mode: '0644'
